@@ -1,6 +1,11 @@
 package com.sjsu.cmpe281.team06.NovaMiaas;
 
 import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -15,6 +20,13 @@ import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
+
+import org.json.simple.JSONObject;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONValue;
+import org.json.simple.parser.ContainerFactory;
+import org.json.simple.parser.ParseException;
+import org.json.simple.parser.JSONParser;
 
 public class SQSMessage {
 	MiaasManager miaasManager = new MiaasManager();
@@ -52,12 +64,13 @@ public class SQSMessage {
             msg = message.getBody();
         }
         
-        if(checkIfCurrentHost(msg)) {
-        	temp = msg;
+        if(msg!=null) {
+        	if(checkIfCurrentHost(msg)) {
+        		temp = msg;
+        	}    	
         	System.out.println("Deleting a message.");
             String messageRecieptHandle = messages.get(0).getReceiptHandle();
-            sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageRecieptHandle));
-            
+            sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageRecieptHandle));          
         }
         
         return temp;
@@ -78,7 +91,7 @@ public class SQSMessage {
 		return currentHost;
 	}
 	
-	public void updateSQL(String msg) {
+	public void start(String msg) throws NumberFormatException, IOException, InterruptedException {
 		if(msg==null||msg.length()==0) return;
 		
 		String [] temp;
@@ -101,21 +114,25 @@ public class SQSMessage {
 				case 0:
 					System.out.println("Register mobile device to user");
 					System.out.println("Power on mobile device");
+					miaasManager.powerOnEmulator(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 				case 1:
 					System.out.println("Mobile already powered on");
 					break;
 				case 2:
 					System.out.println("Power on mobile device");
+					miaasManager.powerOnEmulator(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 			}
 		}
 		if(toDo.equalsIgnoreCase("off")) {
 			switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileId))) {
 				case 0:
+					System.out.println("Mobile did not sign to any user");
 					break;
 				case 1:
 					System.out.println("Power off mobile device");
+					miaasManager.powerOffEmulatorSimple(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 				case 2:
 					System.out.println("Mobile already powered off");
@@ -125,13 +142,16 @@ public class SQSMessage {
 		if(toDo.equalsIgnoreCase("ter")) {
 			switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileId))) {
 				case 0:
+					System.out.println("Mobile did not sign to any user");
 					break;
 				case 1:
 					System.out.println("Power off mobile device");
 					System.out.println("Terminate mobile device");
+					miaasManager.terEmulatorSimple(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 				case 2:
 					System.out.println("Terminate mobile device");
+					miaasManager.terEmulatorSimple(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 			}
 		}
@@ -147,5 +167,39 @@ public class SQSMessage {
 			e.printStackTrace();
 		}
 		return timestamp;
+	}
+	
+	public String test() {
+		String msg = null;
+		String temp = null;
+		System.out.println("Receiving messages from queue: " + myQueueUrl);
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(myQueueUrl);
+        List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
+        for (Message message : messages) {
+            msg = message.getBody();
+        }
+        try {
+        JSONParser parser = new JSONParser();
+
+        ContainerFactory containerFactory = new ContainerFactory() {
+            public List creatArrayContainer() {
+                return new LinkedList();
+            }
+
+            public Map createObjectContainer() {
+                return new LinkedHashMap();
+            }                     
+        };
+
+            Map json = (Map)parser.parse(msg, containerFactory);
+            Iterator iter = json.entrySet().iterator();
+            System.out.println("==iterate result==");
+            Object entry = json.get("Message");
+            temp = entry.toString();
+            //System.out.println(entry.toString());
+          } catch(ParseException pe) {
+            System.out.println(pe);
+        }
+        return temp;
 	}
 }

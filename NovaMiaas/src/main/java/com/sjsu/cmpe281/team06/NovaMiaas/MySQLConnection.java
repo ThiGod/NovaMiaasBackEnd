@@ -21,7 +21,7 @@ public class MySQLConnection {
 		
 		try {
 			connection = DriverManager
-			.getConnection("jdbc:mysql://localhost:3306/"+MyEntity.SQL_NAME, MyEntity.SQL_USERNAME, MyEntity.SQL_PASSWORD);
+			.getConnection("jdbc:mysql://54.200.72.126/"+MyEntity.SQL_NAME, MyEntity.SQL_USERNAME, MyEntity.SQL_PASSWORD);
 	 
 		} catch (SQLException e) {
 			System.out.println("Connection Failed! Check output console");

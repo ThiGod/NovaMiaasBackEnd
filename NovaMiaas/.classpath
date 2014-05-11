@@ -22,6 +22,8 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/ThiGod/Downloads/mysql-connector-java-5.1.30/mysql-connector-java-5.1.30-bin.jar"/>
+	<classpathentry kind="lib" path="/home/thigod/Documents/code/workspace-sts-3.5.1.RELEASE/NovaMiaas/java-json.jar"/>
+	<classpathentry kind="lib" path="/home/thigod/Documents/code/workspace-sts-3.5.1.RELEASE/NovaMiaas/jna-4.1.0.jar"/>
+	<classpathentry kind="lib" path="/home/thigod/Documents/code/workspace-sts-3.5.1.RELEASE/NovaMiaas/mysql-connector-java-5.1.30-bin.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
