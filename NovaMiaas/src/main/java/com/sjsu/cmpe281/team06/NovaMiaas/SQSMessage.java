@@ -1,13 +1,6 @@
 package com.sjsu.cmpe281.team06.NovaMiaas;
 
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.Map;
 import java.io.IOException;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.List;
 
 import com.amazonaws.auth.ClasspathPropertiesFileCredentialsProvider;
@@ -20,10 +13,6 @@ import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
-
-import org.json.simple.parser.ContainerFactory;
-import org.json.simple.parser.ParseException;
-import org.json.simple.parser.JSONParser;
 
 public class SQSMessage {
 	MiaasManager miaasManager = new MiaasManager();
@@ -65,14 +54,14 @@ public class SQSMessage {
         }
         
         if(msg!=null) {
+        	System.out.println("Message in queue: " + msg);
         	if(checkIfCurrentHost(msg)) {
-        		temp = msg;
-        	}    	
-        	System.out.println("Deleting a message.");
-            String messageRecieptHandle = messages.get(0).getReceiptHandle();
-            sqs.deleteMessage(new DeleteMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE, messageRecieptHandle));          
+        		temp = msg;  
+        		System.out.println("Deleting a message.");
+                String messageRecieptHandle = messages.get(0).getReceiptHandle();
+                sqs.deleteMessage(new DeleteMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE, messageRecieptHandle));
+        	}   	 
         }
-        
         return temp;
 	}
 	
@@ -220,52 +209,5 @@ public class SQSMessage {
 				System.err.println("Wrong request, please check again");
 			}
 	    }
-	}
-	
-	public Timestamp convertStringToTimeStamp(String ts) {
-		Timestamp timestamp = null;
-		try {
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-			Date parsedDate = (Date) dateFormat.parse(ts);
-			timestamp = new java.sql.Timestamp(parsedDate.getTime());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return timestamp;
-	}
-	
-	public String test() {
-		String msg = null;
-		String temp = null;
-		System.out.println("Receiving messages from queue: " + MyEntity.RECEIVE_FROM_PHP_QUEUE);
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE);
-        List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
-        for (Message message : messages) {
-            msg = message.getBody();
-        }
-        
-        try {
-        JSONParser parser = new JSONParser();
-
-        ContainerFactory containerFactory = new ContainerFactory() {
-            public List creatArrayContainer() {
-                return new LinkedList();
-            }
-
-            public Map createObjectContainer() {
-                return new LinkedHashMap();
-            }                     
-        };
-
-            Map json = (Map)parser.parse(msg, containerFactory);
-            Iterator iter = json.entrySet().iterator();
-            System.out.println("==iterate result==");
-            Object entry = json.get("Message");
-            temp = entry.toString();
-            //System.out.println(entry.toString());
-          } catch(ParseException pe) {
-            System.out.println(pe);
-        }
-        return temp;
 	}
 }

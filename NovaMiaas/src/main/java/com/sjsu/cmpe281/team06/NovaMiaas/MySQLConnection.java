@@ -6,8 +6,9 @@ import java.sql.SQLException;
 
 public class MySQLConnection {
 	public Connection connection;
+	
 	public MySQLConnection() {
-		//System.out.println("-------- MySQL JDBC Connection Testing ------------");
+		System.out.println("-------- MySQL JDBC Connection Testing ------------");
 		
 		try {
 			Class.forName(MyEntity.SQL_DRIVER);
@@ -17,7 +18,7 @@ public class MySQLConnection {
 			return;
 		}
 	 	
-		//System.out.println("MySQL JDBC Driver Registered!");
+		System.out.println("MySQL JDBC Driver Registered!");
 		
 		try {
 			connection = DriverManager
@@ -31,7 +32,7 @@ public class MySQLConnection {
 		}
 	 
 		if (connection != null) {
-			//System.out.println("You made it, take control your database now!");
+			System.out.println("You made it, take control your database now!");
 		} else {
 			System.err.println("Failed to make connection!");
 		}

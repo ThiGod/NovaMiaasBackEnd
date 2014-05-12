@@ -28,37 +28,11 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 
 public class MiaasManager extends MySQLConnection {
-	Statement stmt = null;
-	ResultSet rs = null;
+	private Statement stmt = null;
+	private ResultSet rs = null;
 	private AmazonSQS sqs;
 	
 	public MiaasManager () {
-	}
-	
-	public void testSelectFromTableUsers(String s, String f) {	
-		try {
-			stmt = connection.createStatement();
-		    String query = "SELECT " + s + " FROM " + f;
-		    rs = stmt.executeQuery(query);
-		    while(rs.next()) {
-		    	int id = rs.getInt("id");
-		    	String firstName = rs.getString("first_name");
-		    	String lastName = rs.getString("last_name");
-		    	String email = rs.getString("email");
-		    	String password = rs.getString("password");
-		    	boolean admin = rs.getBoolean("admin_authority");
-		    	
-		    	System.out.format("%s, %s, %s, %s, %s, %s\n", id, firstName, lastName, email, password, admin);
-		    }
-		    stmt.close();
-		} catch (SQLException ex){
-		    // handle any errors
-		    System.out.println("SQLException: " + ex.getMessage());
-		    System.out.println("SQLState: " + ex.getSQLState());
-		    System.out.println("VendorError: " + ex.getErrorCode());
-		} finally {
-			
-		}
 	}
 	
 	public void getEmulatorIpList() {
@@ -84,20 +58,6 @@ public class MiaasManager extends MySQLConnection {
 		    System.out.println("SQLState: " + ex.getSQLState());
 		    System.out.println("VendorError: " + ex.getErrorCode());
 		}
-	}
-	
-	public void setElasticHostIp() {
-		try {
-	        File statText = new File(MyEntity.UBUNTU_GET_IP_SH_PATH);
-	        FileOutputStream is = new FileOutputStream(statText);
-	        OutputStreamWriter osw = new OutputStreamWriter(is);    
-	        Writer w = new BufferedWriter(osw);
-	        w.write(MyEntity.UBUNTU_GET_IP);
-	        w.close();
-	    } catch (IOException e) {
-	        System.err.println("Problem writing to the file getIP.sh");
-	    }
-		changeMod(MyEntity.UBUNTU_GET_IP_SH_PATH);
 	}
 	
 	public void newEmulatorShCreater(int mobileId) {
@@ -433,7 +393,7 @@ public class MiaasManager extends MySQLConnection {
 		}
 		Process process = Runtime.getRuntime().exec(cmd);
 		
-		if(process.waitFor(15, TimeUnit.SECONDS)) {
+		if(process.waitFor(10, TimeUnit.SECONDS)) {
 			System.out.println("Power on emulator -> Fail");
 			sendMsg(sendMsg+"fail");
 		} else {

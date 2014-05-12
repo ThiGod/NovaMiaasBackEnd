@@ -21,9 +21,9 @@ public class HostManager extends MySQLConnection {
 	public void updateHostIp() throws IOException {
 		String m = "";
 		try {
-			InetAddress addr = getFirstNonLoopbackAddress(true, false);
-			m = addr.getHostAddress();
-			//m = getUbuntuElasticIp();
+			//InetAddress addr = getFirstNonLoopbackAddress(true, false);
+			//m = addr.getHostAddress();
+			m = getUbuntuElasticIp();
 			System.out.println("IP: " + m);
 			try {
 				String query = "UPDATE hosts SET host_ip = ? " 
@@ -70,7 +70,7 @@ public class HostManager extends MySQLConnection {
 	public String getUbuntuElasticIp() throws IOException {
 		String elasticIp = null;
 		Runtime rt = Runtime.getRuntime();
-	    String[] cmd = { "/bin/sh", "-c", "ifconfig eth0 | grep \"inet addr\" | awk -F\":\" {'print $2'} | awk -F\" \" {'print $1'}" };
+	    String[] cmd = { "/bin/sh", "-c", MyEntity.UBUNTU_GET_IP };
 	    Process proc = rt.exec(cmd);
 	    BufferedReader is = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 	    String line;
