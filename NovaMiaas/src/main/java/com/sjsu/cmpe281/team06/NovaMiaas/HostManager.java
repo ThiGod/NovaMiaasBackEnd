@@ -1,5 +1,8 @@
 package com.sjsu.cmpe281.team06.NovaMiaas;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -7,9 +10,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Enumeration;
 
 public class HostManager extends MySQLConnection {
@@ -17,11 +18,12 @@ public class HostManager extends MySQLConnection {
 		
 	}
 	
-	public void updateHostIp() {
+	public void updateHostIp() throws IOException {
 		String m = "";
 		try {
 			InetAddress addr = getFirstNonLoopbackAddress(true, false);
 			m = addr.getHostAddress();
+			//m = getUbuntuElasticIp();
 			System.out.println("IP: " + m);
 			try {
 				String query = "UPDATE hosts SET host_ip = ? " 
@@ -30,7 +32,7 @@ public class HostManager extends MySQLConnection {
 				pst.setString(1, m);
 				pst.setInt(2, MyEntity.HOST_ID);
 				pst.executeUpdate();
-		        System.out.println("Updated Successfully!");
+		        System.out.println("Host IP update Successfully!");
 		        connection.close();
 			} catch(SQLException e) {
 				
@@ -38,22 +40,6 @@ public class HostManager extends MySQLConnection {
 		} catch(SocketException e) {
 			
 		}
-	}
-	
-	public void showIp() throws Exception {
-		System.out.println("Host addr: " + InetAddress.getLocalHost().getHostAddress());  // often returns "127.0.0.1"
-        Enumeration<NetworkInterface> n = NetworkInterface.getNetworkInterfaces();
-        for (; n.hasMoreElements();)
-        {
-                NetworkInterface e = n.nextElement();
-                System.out.println("Interface: " + e.getName());
-                Enumeration<InetAddress> a = e.getInetAddresses();
-                for (; a.hasMoreElements();)
-                {
-                        InetAddress addr = a.nextElement();
-                        System.out.println("  " + addr.getHostAddress());
-                }
-        }
 	}
 	
 	public InetAddress getFirstNonLoopbackAddress(boolean preferIpv4, boolean preferIPv6) throws SocketException {
@@ -81,20 +67,16 @@ public class HostManager extends MySQLConnection {
 	    return null;
 	}
 	
-	public String getHostIp() {
-		String[] temp;
-		StringBuilder ret = new StringBuilder();
-		String m = "";
-		try {
-            InetAddress addr = InetAddress.getLocalHost();
-            temp = addr.getHostAddress().split("\\.");  
-            for(int i=0; i<temp.length; i++){
-            	ret.append(temp[i]).append("-");
-            }
-            m = ret.toString().trim();
-        } catch(UnknownHostException e) {
-             //throw Exception
-        }
-		return m;
+	public String getUbuntuElasticIp() throws IOException {
+		String elasticIp = null;
+		Runtime rt = Runtime.getRuntime();
+	    String[] cmd = { "/bin/sh", "-c", "ifconfig eth0 | grep \"inet addr\" | awk -F\":\" {'print $2'} | awk -F\" \" {'print $1'}" };
+	    Process proc = rt.exec(cmd);
+	    BufferedReader is = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+	    String line;
+	    while ((line = is.readLine()) != null) {
+	        elasticIp = line;
+	    }
+	    return elasticIp;
 	}
 }

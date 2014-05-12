@@ -30,7 +30,7 @@ import com.sun.jna.Native;
 public class MiaasManager extends MySQLConnection {
 	Statement stmt = null;
 	ResultSet rs = null;
-	public AmazonSQS sqs;
+	private AmazonSQS sqs;
 	
 	public MiaasManager () {
 	}
@@ -86,8 +86,18 @@ public class MiaasManager extends MySQLConnection {
 		}
 	}
 	
-	public void setRightIp() {
-		
+	public void setElasticHostIp() {
+		try {
+	        File statText = new File(MyEntity.UBUNTU_GET_IP_SH_PATH);
+	        FileOutputStream is = new FileOutputStream(statText);
+	        OutputStreamWriter osw = new OutputStreamWriter(is);    
+	        Writer w = new BufferedWriter(osw);
+	        w.write(MyEntity.UBUNTU_GET_IP);
+	        w.close();
+	    } catch (IOException e) {
+	        System.err.println("Problem writing to the file getIP.sh");
+	    }
+		changeMod(MyEntity.UBUNTU_GET_IP_SH_PATH);
 	}
 	
 	public void newEmulatorShCreater(int mobileId) {
@@ -102,13 +112,13 @@ public class MiaasManager extends MySQLConnection {
 	    } catch (IOException e) {
 	        System.err.println("Problem writing to the file new.sh");
 	    }
-		changeMod();
+		changeMod(MyEntity.UBUNTU_NEW_EMU_SH_PATH);
 	}
 	
 	public CLibrary libc = (CLibrary) Native.loadLibrary("c", CLibrary.class);
 
-    public void changeMod() {
-        libc.chmod(MyEntity.UBUNTU_NEW_EMU_SH_PATH, 0755);
+    public void changeMod(String path) {
+        libc.chmod(path, 0755);
     }
 	
 	public int checkMobileStatus(int mobileId) {
@@ -475,6 +485,7 @@ public class MiaasManager extends MySQLConnection {
         System.out.println("Message: " + msg);
         sqs.sendMessage(new SendMessageRequest(MyEntity.SEND_TO_PHP_QUEUE, msg));
 	}
+	
 	public String getNameByIp(String ip) {
 		String cmd;
 		String name = "";
@@ -485,7 +496,7 @@ public class MiaasManager extends MySQLConnection {
 	
 	public void test() {
 		try {
-	        Process p = Runtime.getRuntime().exec("cmd.exe /c cd c:/App/12345 & dir");
+	        Process p = Runtime.getRuntime().exec("/bin/sh -c ifconfig eth0 | grep \"inet addr\" | awk -F\":\" {'print $2'} | awk -F\" \" {'print $1'}");
 	        read(p);
 	    } catch (IOException e) {
 	        e.printStackTrace();
@@ -508,7 +519,9 @@ public class MiaasManager extends MySQLConnection {
 	    String line;
 	    String output = "";
 	    try {
+	    	System.out.println("Start cmdExec try");
 	        Process p = Runtime.getRuntime().exec(cmdLine);
+	        System.out.println("cmd: " + cmdLine);
 	        BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
 	        while((line = input.readLine()) != null) {
 	            //System.out.println(line);               
@@ -518,8 +531,6 @@ public class MiaasManager extends MySQLConnection {
 	    } catch (Exception ex) {
 	    	output = "ERROR";
 	        //ex.printStackTrace();
-	    } finally {
-	    	
 	    }
 	    return output;
 	}

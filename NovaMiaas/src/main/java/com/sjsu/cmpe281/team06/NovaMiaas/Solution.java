@@ -4,6 +4,7 @@ public class Solution {
 	public static MiaasManager miaasManager;
 	public static SQSMessage sqsMessage;
 	public static HostManager hostManager;
+	
 	public static void main(String[] args) throws Exception {
 		miaasManager = new MiaasManager();
 		sqsMessage = new SQSMessage();
@@ -21,7 +22,7 @@ public class Solution {
 	}
 	
 	public static void test() throws Exception {
-		//miaasManager.test();
+		//System.out.println(MyEntity.UBUNTU_GET_IP);
 		//miaasManager.listAllUserUploadedApps("12345");
 		//miaasManager.listAllAttachedDevices();
 		//System.out.println(miaasManager.getNameByIp("192.168.56.101:5555"));
@@ -38,8 +39,8 @@ public class Solution {
 		//System.out.println(miaasManager.setEmulatorIpAddress(miaasManager.getCurrentEmulatorNumbers(1)));
 		//System.out.println(miaasManager.getEmulatorName(1));
 		//miaasManager.updateSQL();
-		miaasManager.getEmulatorIpList();
+		//miaasManager.getEmulatorIpList();
 		//System.out.println(miaasManager.getUserMobileId(1, 1));
-		
+		//System.out.println(miaasManager.cmdExec("cd /home"));
 	}
 }

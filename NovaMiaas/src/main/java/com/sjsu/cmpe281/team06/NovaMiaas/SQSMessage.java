@@ -28,12 +28,12 @@ import org.json.simple.parser.JSONParser;
 public class SQSMessage {
 	MiaasManager miaasManager = new MiaasManager();
 	HostManager hostManager = new HostManager();
-	public AmazonSQS sqs;
-	public String userIdFromQueue = null;
-	public String eFlagFromQueue = null; 
-	public String hostIdFromQueue = null; 
-	public String mobileIdFromQueue = null;
-	public String toDoFromQueue = null;
+	private AmazonSQS sqs;
+	private String userIdFromQueue = null;
+	private String eFlagFromQueue = null; 
+	private String hostIdFromQueue = null; 
+	private String mobileIdFromQueue = null;
+	private String toDoFromQueue = null;
 	
 	public SQSMessage() {
 		sqs = new AmazonSQSClient(new ClasspathPropertiesFileCredentialsProvider());
@@ -103,11 +103,13 @@ public class SQSMessage {
 		mobileIdFromQueue = temp[3];
 		toDoFromQueue = temp[4];
 		
+		System.out.println("===================================================");
 	    System.out.println("User id from queue: " + userIdFromQueue);
 	    System.out.println("Emulator flag from queue: " + eFlagFromQueue);
 	    System.out.println("Host id from queue: " + hostIdFromQueue);
 	    System.out.println("Mobile id from queue: " + mobileIdFromQueue);
 	    System.out.println("Todo from queue: " + toDoFromQueue);
+	    System.out.println("===================================================");
 	    
 	    if(Integer.parseInt(eFlagFromQueue)==0) {
 	    	if(toDoFromQueue.equalsIgnoreCase("on")) {
@@ -162,6 +164,9 @@ public class SQSMessage {
 					break;
 				}
 			}
+			else {
+				System.err.println("Wrong request, please check again");
+			}
 	    } 
 	    else {
 	    	if(toDoFromQueue.equalsIgnoreCase("on")) {
@@ -210,6 +215,9 @@ public class SQSMessage {
 				default :
 					break;
 				}
+			}
+			else {
+				System.err.println("Wrong request, please check again");
 			}
 	    }
 	}
