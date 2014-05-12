@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,15 +18,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.auth.ClasspathPropertiesFileCredentialsProvider;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 
 public class MiaasManager extends MySQLConnection {
 	Statement stmt = null;
 	ResultSet rs = null;
+	public AmazonSQS sqs;
 	
 	public MiaasManager () {
-		
 	}
 	
 	public void testSelectFromTableUsers(String s, String f) {	
@@ -59,12 +63,17 @@ public class MiaasManager extends MySQLConnection {
 	
 	public void getEmulatorIpList() {
 		List<String> ipList = new ArrayList<String>();
+		String ip = null;
+		
 		try {
 			stmt = connection.createStatement();
 		    String query = "SELECT ip FROM mobiles WHERE host_id=" + MyEntity.HOST_ID + " AND emulator_flag=0";
 		    rs = stmt.executeQuery(query);
 		    while(rs.next()) {
-		    	ipList.add(rs.getString("ip"));
+		    	ip = rs.getString("ip");
+		    	if(ip != null) {
+		    		ipList.add(ip);
+		    	}
 		    }
 		    stmt.close();
 		    
@@ -105,12 +114,14 @@ public class MiaasManager extends MySQLConnection {
 	public int checkMobileStatus(int mobileId) {
 		int status = 0;
 		try {
+			System.out.println("Start checkMobileStatus try");
+			stmt = null;
 			stmt = connection.createStatement();
 			String query = "SELECT status FROM mobiles WHERE id=" + mobileId;
 			rs = stmt.executeQuery(query);
 			while(rs.next()) { 
 				status = rs.getInt("status");
-				//System.out.println("Status: " + status);
+				System.out.println("Current Status: " + status);
 			}
 			stmt.close();
 		} catch (SQLException ex) {
@@ -122,6 +133,7 @@ public class MiaasManager extends MySQLConnection {
 	public int getRunningEmulatorNumber() {
 		int count  = 0;
 		try {
+			stmt = null;
 			stmt = connection.createStatement();
 			String query = "SELECT COUNT(*) FROM mobiles WHERE emulator_flag=0 AND status!=0 AND host_id=" + MyEntity.HOST_ID;
 			rs = stmt.executeQuery(query);
@@ -138,6 +150,7 @@ public class MiaasManager extends MySQLConnection {
 	public int getRunningDeviceNumber() {
 		int count  = 0;
 		try {
+			stmt = null;
 			stmt = connection.createStatement();
 			String query = "SELECT COUNT(*) FROM mobiles WHERE emulator_flag=1 AND status!=0 AND host_id=" + MyEntity.HOST_ID;
 			rs = stmt.executeQuery(query);
@@ -165,6 +178,7 @@ public class MiaasManager extends MySQLConnection {
 	public String getEmulatorName(int mobileId) {
 		String name = "";
 		try {
+			stmt = null;
 			stmt = connection.createStatement();
 			String query = "SELECT name FROM mobiles WHERE id=" + mobileId;
 			rs = stmt.executeQuery(query);
@@ -179,9 +193,12 @@ public class MiaasManager extends MySQLConnection {
 	}
 	
 	public void powerOnEmulatorUpdateMySQL(int userId, int mobileId) {
-		int mobileStatus = checkMobileStatus(mobileId);
-		
 		try {
+			int mobileStatus = checkMobileStatus(mobileId);
+			//System.out.println("Mobile id: " + mobileId + " status: " + mobileStatus);
+			Date date = new Date();
+        	Timestamp timestamp = new Timestamp(date.getTime());
+        	
 			if(mobileStatus==2) {
 				String queryTemp = "UPDATE mobiles SET status = ? " 
 						+ " WHERE id = ?";
@@ -189,7 +206,7 @@ public class MiaasManager extends MySQLConnection {
 				pstTemp.setInt(1, 1);
 				pstTemp.setInt(2, mobileId);
 				pstTemp.executeUpdate();
-		        System.out.println("Table mobiles updated Successfully!");
+		        System.out.println("Table mobiles updated (without ip) Successfully!");
 			} else {
 				String query = "UPDATE mobiles SET status = ? " 
 						+ " , ip = ? "
@@ -208,31 +225,30 @@ public class MiaasManager extends MySQLConnection {
 			pst2.setInt(1, getRunningEmulatorNumber());
 			pst2.setInt(2, MyEntity.HOST_ID);
 			pst2.executeUpdate();
-	        System.out.println("Table hosts updated Successfully!");
-	        
-	        String query3 = "INSERT INTO user_mobile (user_id, mobile_id)"
-	                + " VALUES (?, ?)";
+	        System.out.println("Table hosts updated Successfully!"); 
+        	
+	        String query3 = "INSERT INTO user_mobile (user_id, mobile_id, start_time)"
+	                + " VALUES (?, ?, ?)";
 			PreparedStatement pst3 = connection.prepareStatement(query3);
 			pst3.setInt(1, userId);
 			pst3.setInt(2, mobileId);
+			pst3.setTimestamp(3, timestamp);
 			pst3.executeUpdate();
 	        System.out.println("Table user_mobile updated Successfully!");
-
-	        connection.close();    	        
+	        
 		} catch(SQLException e) {
-			
+			e.printStackTrace();
 		}
 	}
 	
-	public void powerOffEmulatorUpdateMySQL(int userId, int mobileId) {
-		int tempId = getUserMobileId(userId, mobileId);
-		
+	public void powerOffEmulatorUpdateMySQL(int userId, int mobileId) {	
 		try {	
+			int tempId = getUserMobileId(userId, mobileId);
+			
 			String query = "UPDATE mobiles SET status = ? " 
 					+ " WHERE id = ?";
 			PreparedStatement pst = connection.prepareStatement(query);
 			pst.setInt(1, 2);
-			//pst.setString(2, "NULL");
 			pst.setInt(2, mobileId);
 			pst.executeUpdate();
 	        System.out.println("Table mobiles updated Successfully!");
@@ -258,11 +274,10 @@ public class MiaasManager extends MySQLConnection {
 		        System.out.println("Table user_mobile updated Successfully!");
 	        } else {
 	        	System.err.println("Something wrong with user_mobile table");
-	        }
-	              
-	        connection.close();            
+	        }      
+	        
 		} catch(SQLException e) {
-			
+			e.printStackTrace();
 		}
 	}
 	
@@ -289,30 +304,33 @@ public class MiaasManager extends MySQLConnection {
 	        System.out.println("Table hosts updated Successfully!");
 	        
 	        if(tempId!=0) {
-	        	Date date = new Date();
-	        	Timestamp timestamp = new Timestamp(date.getTime());
-	        	
-	        	String query3 = "UPDATE user_mobile SET end_time = ? "
-		                + " WHERE id = ?";
-				PreparedStatement pst3 = connection.prepareStatement(query3);
-				pst3.setTimestamp(1, timestamp);
-				pst3.setInt(2, tempId);
-				pst3.executeUpdate();
-		        System.out.println("Table user_mobile updated Successfully!");
+	        	if(checkMobileStatus(mobileId)==1) {
+	        		Date date = new Date();
+		        	Timestamp timestamp = new Timestamp(date.getTime());
+		        	
+		        	String query3 = "UPDATE user_mobile SET end_time = ? "
+			                + " WHERE id = ?";
+					PreparedStatement pst3 = connection.prepareStatement(query3);
+					pst3.setTimestamp(1, timestamp);
+					pst3.setInt(2, tempId);
+					pst3.executeUpdate();
+					System.out.println("Table user_mobile updated Successfully!");
+	        	} else {
+	        		System.out.println("No need to update user_mobile table");
+	        	}     
 	        } else {
 	        	System.err.println("Something wrong with user_mobile table");
 	        }
-	              
-	        connection.close();    
-	        
+           
 		} catch(SQLException e) {
-			
+			e.printStackTrace();
 		}
 	}
 	
 	public int getUserMobileId(int userId, int mobileId) {
 		int id  = 0;
 		try {
+			stmt = null;
 			stmt = connection.createStatement();
 			String query = "SELECT MIN(id) FROM user_mobile WHERE user_id=" + userId
 					+ " AND mobile_id=" + mobileId
@@ -341,7 +359,7 @@ public class MiaasManager extends MySQLConnection {
 		if (process.exitValue() == 0) {
 			System.out.println("Success");
 		} else {
-			System.err.println("Fail");
+			System.out.println("Fail");
 		}
 	}
 	
@@ -357,7 +375,7 @@ public class MiaasManager extends MySQLConnection {
 		if (process.exitValue() == 0) {
 			System.out.println("Success");
 		} else {
-			System.err.println("Fail");
+			System.out.println("Fail");
 		}
 	}
 	
@@ -373,7 +391,7 @@ public class MiaasManager extends MySQLConnection {
 		if (process.exitValue() == 0) {
 			System.out.println("Success");
 		} else {
-			System.err.println("Fail");
+			System.out.println("Fail");
 		}
 	}
 	
@@ -389,55 +407,74 @@ public class MiaasManager extends MySQLConnection {
 		if (process.exitValue() == 0) {
 			System.out.println("Success");
 		} else {
-			System.err.println("Fail");
+			System.out.println("Fail");
 		}
 	}
 	
 	public void powerOnEmulator(int userId, int mobileId) throws IOException, InterruptedException {
 		String cmd = "";
 		String mobileName = getEmulatorName(mobileId);
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/on/"; 
 		
 		if (System.getProperty("os.name").startsWith("Windows")) {
-			cmd = "cmd.exe /c cd C:/Dev/Genymotion & player --vm-name \"" + mobileName + "\"";
+			cmd = MyEntity.WINDOWS_GENY_PATH + " \"" + mobileName + "\"";
 		} else {
 			cmd = MyEntity.UBUNTU_NEW_EMU_SH_PATH;
-			//cmd = "gnome-terminal && cd ~/Documents/dev/genymotion && ./player --vm-name \"" + mobileName + "\"";
 		}
 		Process process = Runtime.getRuntime().exec(cmd);
-		powerOnEmulatorUpdateMySQL(userId, mobileId);
-		if(process.waitFor(10, TimeUnit.SECONDS)) {
-			System.out.println("Success");
+		
+		if(process.waitFor(15, TimeUnit.SECONDS)) {
+			System.out.println("Power on emulator -> Fail");
+			sendMsg(sendMsg+"fail");
 		} else {
-			System.err.println("Fail");
+			System.out.println("Power on emulator -> Success");
+			powerOnEmulatorUpdateMySQL(userId, mobileId);
+			sendMsg(sendMsg+"pass");
 		}
 	}
 	
 	public void powerOffEmulator(int userId, int mobileId) throws IOException, InterruptedException {
 		String cmd = "";
 		String mobileName = getEmulatorName(mobileId);
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/off/"; 
+		
 		if (System.getProperty("os.name").startsWith("Windows")) {
 			cmd = "vboxmanage controlvm \"" + mobileName + "\" poweroff";
 		} else {
 			cmd = "vboxmanage controlvm \"" + mobileName + "\" poweroff";
 		}
 		Process process = Runtime.getRuntime().exec(cmd);
-		powerOffEmulatorUpdateMySQL(userId, mobileId);
-		process.waitFor(10, TimeUnit.SECONDS);
-		if(process.waitFor(10, TimeUnit.SECONDS)) {
-			System.out.println("Success");
+		
+		if(process.waitFor(15, TimeUnit.SECONDS)) {
+			System.out.println("Power off emulator -> Success");
+			powerOffEmulatorUpdateMySQL(userId, mobileId);
+			sendMsg(sendMsg+"pass");		
 		} else {
-			System.err.println("Fail");
+			System.out.println("Power off emulator -> Fail");
+			sendMsg(sendMsg+"fail");
 		}
 	}
 	
 	public void powerOffEmulatorSimple(int userId, int mobileId) {
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/off/"; 
 		powerOffEmulatorUpdateMySQL(userId, mobileId);
+		sendMsg(sendMsg+"pass");
 	}
 	
 	public void terEmulatorSimple(int userId, int mobileId) {
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/ter/"; 
 		terEmulatorUpdateMySQL(userId, mobileId);
+		sendMsg(sendMsg+"pass");
 	}
 	
+	public void sendMsg(String msg) {
+		sqs = new AmazonSQSClient(new ClasspathPropertiesFileCredentialsProvider());
+		Region usWest1 = Region.getRegion(Regions.US_WEST_1);
+		sqs.setRegion(usWest1);
+		System.out.println("Sending a message to queue: " + MyEntity.SEND_TO_PHP_QUEUE);
+        System.out.println("Message: " + msg);
+        sqs.sendMessage(new SendMessageRequest(MyEntity.SEND_TO_PHP_QUEUE, msg));
+	}
 	public String getNameByIp(String ip) {
 		String cmd;
 		String name = "";

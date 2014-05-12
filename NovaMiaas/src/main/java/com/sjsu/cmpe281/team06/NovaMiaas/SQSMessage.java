@@ -21,9 +21,6 @@ import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 
-import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONValue;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.ParseException;
 import org.json.simple.parser.JSONParser;
@@ -32,33 +29,36 @@ public class SQSMessage {
 	MiaasManager miaasManager = new MiaasManager();
 	HostManager hostManager = new HostManager();
 	public AmazonSQS sqs;
-	public String myQueueUrl = null;
+	public String userIdFromQueue = null;
+	public String eFlagFromQueue = null; 
+	public String hostIdFromQueue = null; 
+	public String mobileIdFromQueue = null;
+	public String toDoFromQueue = null;
 	
 	public SQSMessage() {
 		sqs = new AmazonSQSClient(new ClasspathPropertiesFileCredentialsProvider());
 		Region usWest1 = Region.getRegion(Regions.US_WEST_1);
 		sqs.setRegion(usWest1);
-		myQueueUrl = "connectQueue1";
 	}
 	
 	public void createQueue() {
-		System.out.println("Creating a new SQS queue called: " + myQueueUrl);
-        CreateQueueRequest createQueueRequest = new CreateQueueRequest(myQueueUrl);
-        myQueueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
+		System.out.println("Creating a new SQS queue called: " + MyEntity.RECEIVE_FROM_PHP_QUEUE);
+        CreateQueueRequest createQueueRequest = new CreateQueueRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE);
+        MyEntity.RECEIVE_FROM_PHP_QUEUE = sqs.createQueue(createQueueRequest).getQueueUrl();
 	}
 	
 	public void sendMessageToQueue(String msg) {
 		createQueue();
-        System.out.println("Sending a message to queue: " + myQueueUrl);
+        System.out.println("Sending a message to queue: " + MyEntity.RECEIVE_FROM_PHP_QUEUE);
         System.out.println("Message: " + msg);
-        sqs.sendMessage(new SendMessageRequest(myQueueUrl, msg));
+        sqs.sendMessage(new SendMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE, msg));
 	}
 	
 	public String reciveMessageFromQueue() {
 		String msg = null;
 		String temp = null;
-		System.out.println("Receiving messages from queue: " + myQueueUrl);
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(myQueueUrl);
+		System.out.println("Receiving messages from queue: " + MyEntity.RECEIVE_FROM_PHP_QUEUE);
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE);
         List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
         for (Message message : messages) {
             msg = message.getBody();
@@ -70,7 +70,7 @@ public class SQSMessage {
         	}    	
         	System.out.println("Deleting a message.");
             String messageRecieptHandle = messages.get(0).getReceiptHandle();
-            sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageRecieptHandle));          
+            sqs.deleteMessage(new DeleteMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE, messageRecieptHandle));          
         }
         
         return temp;
@@ -94,67 +94,124 @@ public class SQSMessage {
 	public void start(String msg) throws NumberFormatException, IOException, InterruptedException {
 		if(msg==null||msg.length()==0) return;
 		
-		String [] temp;
-		String userId, eFlag, hostId, mobileId, toDo;
+		String [] temp = null;
+
 		temp = msg.split("/");
-		userId = temp[0];
-		eFlag = temp[1];
-		hostId = temp[2];
-		mobileId = temp[3];
-		toDo = temp[4];
+		userIdFromQueue = temp[0];
+		eFlagFromQueue = temp[1];
+		hostIdFromQueue = temp[2];
+		mobileIdFromQueue = temp[3];
+		toDoFromQueue = temp[4];
 		
-	    System.out.println(userId);
-	    System.out.println(eFlag);
-	    System.out.println(hostId);
-	    System.out.println(mobileId);
-	    System.out.println(toDo);
+	    System.out.println("User id from queue: " + userIdFromQueue);
+	    System.out.println("Emulator flag from queue: " + eFlagFromQueue);
+	    System.out.println("Host id from queue: " + hostIdFromQueue);
+	    System.out.println("Mobile id from queue: " + mobileIdFromQueue);
+	    System.out.println("Todo from queue: " + toDoFromQueue);
 	    
-		if(toDo.equalsIgnoreCase("on")) {
-			switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileId))) {
+	    if(Integer.parseInt(eFlagFromQueue)==0) {
+	    	if(toDoFromQueue.equalsIgnoreCase("on")) {
+				switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileIdFromQueue))) {
+				case 0:
+					System.out.println("Register mobile emulator to user");
+					System.out.println("Power on mobile emulator");
+					miaasManager.powerOnEmulator(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
+					break;
+				case 1:
+					System.out.println("Emulator already powered on");
+					break;
+				case 2:
+					System.out.println("Power on mobile emulator");
+					miaasManager.powerOnEmulator(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
+					break;
+				default :
+					break;
+				}
+			}
+			else if(toDoFromQueue.equalsIgnoreCase("off")) {
+				switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileIdFromQueue))) {
+				case 0:	
+					System.out.println("Mobile emulator did not sign to any user");
+					break;
+				case 1:	
+					System.out.println("Power off mobile emulator");
+					miaasManager.powerOffEmulatorSimple(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
+					break;
+				case 2:
+					System.out.println("Mobile emulator already powered off");
+					break;
+				default :
+					break;
+				}
+			}
+			else if(toDoFromQueue.equalsIgnoreCase("ter"))  {
+				switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileIdFromQueue))) {
+				case 0:
+					System.out.println("Mobile did not sign to any user");
+					break;
+				case 1:
+					System.out.println("Power off mobile emulator");
+					System.out.println("Terminate mobile emulator");
+					miaasManager.terEmulatorSimple(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
+					break;
+				case 2:
+					System.out.println("Terminate mobile emulator");
+					miaasManager.terEmulatorSimple(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
+					break;
+				default :
+					break;
+				}
+			}
+	    } 
+	    else {
+	    	if(toDoFromQueue.equalsIgnoreCase("on")) {
+				switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileIdFromQueue))) {
 				case 0:
 					System.out.println("Register mobile device to user");
 					System.out.println("Power on mobile device");
-					miaasManager.powerOnEmulator(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 				case 1:
-					System.out.println("Mobile already powered on");
+					System.out.println("Mobile device already powered on");
 					break;
 				case 2:
 					System.out.println("Power on mobile device");
-					miaasManager.powerOnEmulator(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
+				default :
+					break;
+				}
 			}
-		}
-		if(toDo.equalsIgnoreCase("off")) {
-			switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileId))) {
-				case 0:
-					System.out.println("Mobile did not sign to any user");
+			else if(toDoFromQueue.equalsIgnoreCase("off")) {
+				switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileIdFromQueue))) {
+				case 0:	
+					System.out.println("Mobile device did not sign to any user");
 					break;
-				case 1:
+				case 1:	
 					System.out.println("Power off mobile device");
-					miaasManager.powerOffEmulatorSimple(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 				case 2:
-					System.out.println("Mobile already powered off");
+					System.out.println("Mobile device already powered off");
 					break;
+				default :
+					break;
+				}
 			}
-		}
-		if(toDo.equalsIgnoreCase("ter")) {
-			switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileId))) {
+			else if(toDoFromQueue.equalsIgnoreCase("ter"))  {
+				switch (miaasManager.checkMobileStatus(Integer.parseInt(mobileIdFromQueue))) {
 				case 0:
-					System.out.println("Mobile did not sign to any user");
+					System.out.println("Mobile device did not sign to any user");
 					break;
 				case 1:
 					System.out.println("Power off mobile device");
 					System.out.println("Terminate mobile device");
-					miaasManager.terEmulatorSimple(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
 				case 2:
 					System.out.println("Terminate mobile device");
-					miaasManager.terEmulatorSimple(Integer.parseInt(userId), Integer.parseInt(mobileId));
 					break;
+				default :
+					break;
+				}
 			}
-		}
+	    }
 	}
 	
 	public Timestamp convertStringToTimeStamp(String ts) {
@@ -172,12 +229,13 @@ public class SQSMessage {
 	public String test() {
 		String msg = null;
 		String temp = null;
-		System.out.println("Receiving messages from queue: " + myQueueUrl);
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(myQueueUrl);
+		System.out.println("Receiving messages from queue: " + MyEntity.RECEIVE_FROM_PHP_QUEUE);
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE);
         List<Message> messages = sqs.receiveMessage(receiveMessageRequest).getMessages();
         for (Message message : messages) {
             msg = message.getBody();
         }
+        
         try {
         JSONParser parser = new JSONParser();
 

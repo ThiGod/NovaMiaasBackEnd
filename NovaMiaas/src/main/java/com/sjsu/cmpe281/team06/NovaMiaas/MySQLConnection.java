@@ -21,10 +21,11 @@ public class MySQLConnection {
 		
 		try {
 			connection = DriverManager
-			.getConnection("jdbc:mysql://54.200.72.126/"+MyEntity.SQL_NAME, MyEntity.SQL_USERNAME, MyEntity.SQL_PASSWORD);
+			.getConnection("jdbc:mysql://" + MyEntity.SQL_URL + "/" 
+			+ MyEntity.SQL_NAME, MyEntity.SQL_USERNAME, MyEntity.SQL_PASSWORD);
 	 
 		} catch (SQLException e) {
-			System.out.println("Connection Failed! Check output console");
+			System.err.println("Connection Failed! Check output console");
 			e.printStackTrace();
 			return;
 		}
@@ -32,7 +33,7 @@ public class MySQLConnection {
 		if (connection != null) {
 			//System.out.println("You made it, take control your database now!");
 		} else {
-			System.out.println("Failed to make connection!");
+			System.err.println("Failed to make connection!");
 		}
 	}
 }
