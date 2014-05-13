@@ -12,5 +12,5 @@ public class MyEntity {
 	public static final String WINDOWS_GENY_PATH = "cmd.exe /c cd C:/Dev/Genymotion & player --vm-name";
 	public static String SEND_TO_PHP_QUEUE = "receivedfrom_Host";
 	public static String RECEIVE_FROM_PHP_QUEUE = "sendto_Host";
-	public static final String UBUNTU_GET_IP = "ifconfig eth0 | grep \"inet addr\" | awk -F\":\" {'print $2'} | awk -F\" \" {'print $1'}";
+	public static final String UBUNTU_GET_IP_COMMAND = "ifconfig eth0 | grep \"inet addr\" | awk -F\":\" {'print $2'} | awk -F\" \" {'print $1'}";
 }

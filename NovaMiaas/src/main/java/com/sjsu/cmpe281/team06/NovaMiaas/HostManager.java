@@ -70,7 +70,7 @@ public class HostManager extends MySQLConnection {
 	public String getUbuntuElasticIp() throws IOException {
 		String elasticIp = null;
 		Runtime rt = Runtime.getRuntime();
-	    String[] cmd = { "/bin/sh", "-c", MyEntity.UBUNTU_GET_IP };
+	    String[] cmd = { "/bin/sh", "-c", MyEntity.UBUNTU_GET_IP_COMMAND };
 	    Process proc = rt.exec(cmd);
 	    BufferedReader is = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 	    String line;

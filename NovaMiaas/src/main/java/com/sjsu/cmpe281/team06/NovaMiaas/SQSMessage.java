@@ -126,7 +126,7 @@ public class SQSMessage {
 					break;
 				case 1:	
 					System.out.println("Power off mobile emulator");
-					miaasManager.powerOffEmulatorSimple(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
+					miaasManager.powerOffEmulator(Integer.parseInt(userIdFromQueue), Integer.parseInt(mobileIdFromQueue));
 					break;
 				case 2:
 					System.out.println("Mobile emulator already powered off");

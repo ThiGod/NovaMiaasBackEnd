@@ -35,7 +35,7 @@ public class MiaasManager extends MySQLConnection {
 	public MiaasManager () {
 	}
 	
-	public void getEmulatorIpList() {
+	public List<String> getEmulatorIpList() {
 		List<String> ipList = new ArrayList<String>();
 		String ip = null;
 		
@@ -57,6 +57,42 @@ public class MiaasManager extends MySQLConnection {
 		    System.out.println("SQLException: " + ex.getMessage());
 		    System.out.println("SQLState: " + ex.getSQLState());
 		    System.out.println("VendorError: " + ex.getErrorCode());
+		}
+		return ipList;
+	}
+	
+	public String setIp(List<String> ipList) {
+		String ip = "";
+		if(ipList==null|ipList.size()==0) {
+			ip = "192.168.56.101:5555";
+		} else {
+			for(int i=0; i<ipList.size(); i++) {
+				if(ip!=ipList.get(i)) {
+					
+				} else {
+					ip = "192.168.56.10" + i;
+				}
+			}
+		}	
+		return ip;
+	}
+	
+	public void get(String ip){ 
+		String [] temp = null;
+		temp = ip.split(":");
+		String realIp = temp[0];
+		String [] temp2 = null;
+		temp2 = realIp.split(".");
+		String last = temp2[3];
+		System.out.println(last);
+	}
+	
+	public void findLowestIp(List<String> ipList) {
+		String ip = ipList.get(0);
+		for (String temp:ipList){
+			if(temp==ip) {
+				ip = temp;
+			}
 		}
 	}
 	
@@ -165,7 +201,6 @@ public class MiaasManager extends MySQLConnection {
 	public void powerOnEmulatorUpdateMySQL(int userId, int mobileId) {
 		try {
 			int mobileStatus = checkMobileStatus(mobileId);
-			//System.out.println("Mobile id: " + mobileId + " status: " + mobileStatus);
 			Date date = new Date();
         	Timestamp timestamp = new Timestamp(date.getTime());
         	
@@ -221,7 +256,7 @@ public class MiaasManager extends MySQLConnection {
 			pst.setInt(1, 2);
 			pst.setInt(2, mobileId);
 			pst.executeUpdate();
-	        System.out.println("Table mobiles updated Successfully!");
+	        System.out.println("Table mobiles updated (without ip) Successfully!");
 	        
 	        String query2 = "UPDATE hosts SET used_emulator_no = ? " 
 					+ " WHERE id = ?";
@@ -260,7 +295,7 @@ public class MiaasManager extends MySQLConnection {
 					+ " WHERE id = ?";
 			PreparedStatement pst = connection.prepareStatement(query);
 			pst.setInt(1, 0);
-			pst.setString(2, "NULL");
+			pst.setString(2, null);
 			pst.setInt(3, mobileId);
 			pst.executeUpdate();
 	        System.out.println("Table mobiles updated Successfully!");
@@ -414,9 +449,10 @@ public class MiaasManager extends MySQLConnection {
 			cmd = "vboxmanage controlvm \"" + mobileName + "\" poweroff";
 		}
 		Process process = Runtime.getRuntime().exec(cmd);
-		
-		if(process.waitFor(15, TimeUnit.SECONDS)) {
+
+		if(process.waitFor(5, TimeUnit.SECONDS)) {
 			System.out.println("Power off emulator -> Success");
+			powerOff(mobileId);
 			powerOffEmulatorUpdateMySQL(userId, mobileId);
 			sendMsg(sendMsg+"pass");		
 		} else {
@@ -425,13 +461,20 @@ public class MiaasManager extends MySQLConnection {
 		}
 	}
 	
+	public void powerOff(int mobileId) throws IOException {
+		String mobileName = getEmulatorName(mobileId);
+		String pfcmd = "ps -axf | grep \"/player --vm-name " + mobileName + "\"  | grep \"Sl\" |grep -v grep | awk {'print \"kill \" $1'} | sh";
+		getCmdExec(pfcmd);
+	}
+	
 	public void powerOffEmulatorSimple(int userId, int mobileId) {
 		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/off/"; 
 		powerOffEmulatorUpdateMySQL(userId, mobileId);
 		sendMsg(sendMsg+"pass");
 	}
 	
-	public void terEmulatorSimple(int userId, int mobileId) {
+	public void terEmulatorSimple(int userId, int mobileId) throws IOException {
+		powerOff(mobileId);
 		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/ter/"; 
 		terEmulatorUpdateMySQL(userId, mobileId);
 		sendMsg(sendMsg+"pass");
@@ -450,30 +493,26 @@ public class MiaasManager extends MySQLConnection {
 		String cmd;
 		String name = "";
 		cmd = "adb -s " + ip + " shell getprop ro.product.model";
-		name = cmdExec(cmd);
+		name = getCmdExec(cmd);
 		return name;
 	}
 	
-	public void test() {
+	public String getCmdExec(String cmdLine) {
+		String output = "";
 		try {
-	        Process p = Runtime.getRuntime().exec("/bin/sh -c ifconfig eth0 | grep \"inet addr\" | awk -F\":\" {'print $2'} | awk -F\" \" {'print $1'}");
-	        read(p);
-	    } catch (IOException e) {
-	        e.printStackTrace();
-	    }
-	}
-	
-	public void read(Process p) {
-		try {
-			BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
-	        String line = null;
-	        while((line=input.readLine()) != null) {
-	            System.out.println(line);
-	        }   
-	    } catch(IOException e1) {
-	    	e1.printStackTrace(); 
-	    }
-	}
+			Runtime rt = Runtime.getRuntime();
+		    String[] cmd = { "/bin/sh", "-c", cmdLine };
+		    Process proc = rt.exec(cmd);
+		    BufferedReader is = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+		    String line;
+		    while ((line = is.readLine()) != null) {
+		        output = line;
+		    }
+		} catch(Exception e) {
+			output = "ERROR";
+		}
+	    return output;
+	}	
 	
 	public String cmdExec(String cmdLine) {
 	    String line;
