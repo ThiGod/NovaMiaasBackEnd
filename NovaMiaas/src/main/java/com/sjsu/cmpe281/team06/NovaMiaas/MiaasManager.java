@@ -201,8 +201,6 @@ public class MiaasManager extends MySQLConnection {
 	public void powerOnEmulatorUpdateMySQL(int userId, int mobileId) {
 		try {
 			int mobileStatus = checkMobileStatus(mobileId);
-			Date date = new Date();
-        	Timestamp timestamp = new Timestamp(date.getTime());
         	
 			if(mobileStatus==2) {
 				String queryTemp = "UPDATE mobiles SET status = ? " 
@@ -231,6 +229,9 @@ public class MiaasManager extends MySQLConnection {
 			pst2.setInt(2, MyEntity.HOST_ID);
 			pst2.executeUpdate();
 	        System.out.println("Table hosts updated Successfully!"); 
+        	
+	        Date date = new Date();
+        	Timestamp timestamp = new Timestamp(date.getTime());
         	
 	        String query3 = "INSERT INTO user_mobile (user_id, mobile_id, start_time)"
 	                + " VALUES (?, ?, ?)";
@@ -308,21 +309,17 @@ public class MiaasManager extends MySQLConnection {
 			pst2.executeUpdate();
 	        System.out.println("Table hosts updated Successfully!");
 	        
-	        if(tempId!=0) {
-	        	if(checkMobileStatus(mobileId)==1) {
-	        		Date date = new Date();
-		        	Timestamp timestamp = new Timestamp(date.getTime());
-		        	
-		        	String query3 = "UPDATE user_mobile SET end_time = ? "
-			                + " WHERE id = ?";
-					PreparedStatement pst3 = connection.prepareStatement(query3);
-					pst3.setTimestamp(1, timestamp);
-					pst3.setInt(2, tempId);
-					pst3.executeUpdate();
-					System.out.println("Table user_mobile updated Successfully!");
-	        	} else {
-	        		System.out.println("No need to update user_mobile table");
-	        	}     
+        	if(tempId!=0) {
+        		Date date = new Date();
+	        	Timestamp timestamp = new Timestamp(date.getTime());
+	        	
+	        	String query3 = "UPDATE user_mobile SET end_time = ? "
+		                + " WHERE id = ?";
+				PreparedStatement pst3 = connection.prepareStatement(query3);
+				pst3.setTimestamp(1, timestamp);
+				pst3.setInt(2, tempId);
+				pst3.executeUpdate();
+				System.out.println("Table user_mobile updated Successfully!");   
 	        } else {
 	        	System.err.println("Something wrong with user_mobile table");
 	        }
@@ -419,8 +416,9 @@ public class MiaasManager extends MySQLConnection {
 	public void powerOnEmulator(int userId, int mobileId) throws IOException, InterruptedException {
 		String cmd = "";
 		String mobileName = getEmulatorName(mobileId);
+		newEmulatorShCreater(mobileId);
+		System.out.println("Mobile Name: " + mobileName);
 		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/on/"; 
-		
 		if (System.getProperty("os.name").startsWith("Windows")) {
 			cmd = MyEntity.WINDOWS_GENY_PATH + " \"" + mobileName + "\"";
 		} else {
@@ -436,6 +434,27 @@ public class MiaasManager extends MySQLConnection {
 			powerOnEmulatorUpdateMySQL(userId, mobileId);
 			sendMsg(sendMsg+"pass");
 		}
+	}
+	
+	public void powerOnDevice(int userId, int mobileId) throws IOException, InterruptedException {
+		String mobileName = getEmulatorName(mobileId);
+		System.out.println("Mobile Name: " + mobileName);
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/on/"; 	
+		sendMsg(sendMsg+"pass");
+	}
+	
+	public void powerOffDevice(int userId, int mobileId) throws IOException, InterruptedException {
+		String mobileName = getEmulatorName(mobileId);
+		System.out.println("Mobile Name: " + mobileName);
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/off/"; 	
+		sendMsg(sendMsg+"pass");
+	}
+	
+	public void terDevice(int userId, int mobileId) throws IOException, InterruptedException {
+		String mobileName = getEmulatorName(mobileId);
+		System.out.println("Mobile Name: " + mobileName);
+		String sendMsg = MyEntity.HOST_ID + "/" + mobileId + "/ter/"; 	
+		sendMsg(sendMsg+"pass");
 	}
 	
 	public void powerOffEmulator(int userId, int mobileId) throws IOException, InterruptedException {
@@ -512,7 +531,9 @@ public class MiaasManager extends MySQLConnection {
 			output = "ERROR";
 		}
 	    return output;
-	}	
+	}
+	
+	
 	
 	public String cmdExec(String cmdLine) {
 	    String line;

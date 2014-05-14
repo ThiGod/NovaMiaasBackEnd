@@ -57,10 +57,10 @@ public class SQSMessage {
         	System.out.println("Message in queue: " + msg);
         	if(checkIfCurrentHost(msg)) {
         		temp = msg;  
-        		System.out.println("Deleting a message.");
-                String messageRecieptHandle = messages.get(0).getReceiptHandle();
-                sqs.deleteMessage(new DeleteMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE, messageRecieptHandle));
-        	}   	 
+        	}   
+        	System.out.println("Deleting a message.");
+            String messageRecieptHandle = messages.get(0).getReceiptHandle();
+            sqs.deleteMessage(new DeleteMessageRequest(MyEntity.RECEIVE_FROM_PHP_QUEUE, messageRecieptHandle));
         }
         return temp;
 	}
